@@ -1,0 +1,547 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "title" : "Pori Contacts API",
+    "version" : "0.1",
+    "description" : "An API for the phonebook for the City of Pori, Finland. \n# Using the API\n## API keys\nAll API requests require the use of an API key. The API keys must be provided  as a header (X-API-KEY) for each request.\n## Data formats\nThe API uses JSON as its data format, both for responses and request bodies (when applicable).\n## Scope\nContacts are categorized into **public**, **internal**, and **secret** contacts. By default, the API operates only with **public** contacts. Access to **internal** and **secret** contacts is restricted using API keys.\n## Filtering\nWhen retrieving contacts through the API, the results can be filtered using tags or organizational data. See `GET /contacts` for details on filtering. **Filtering contacts using tags should be preferred**.\n"
+  },
+  "tags" : [ {
+    "name" : "Basic",
+    "description" : "Basic read-only operations to the contact data."
+  }, {
+    "name" : "Restricted",
+    "description" : "Operations requiring special access rights."
+  } ],
+  "security" : [ {
+    "ApiKey" : [ ]
+  } ],
+  "paths" : {
+    "/contacts" : {
+      "get" : {
+        "summary" : "Retrieve a list of contacts",
+        "description" : "Retrieve a (possibly filtered) list of contacts. \n# Response\nThe response for successful request is a JSON object containing two properties\n* **contacts** - The actual contact data as an array of Contact objects\n* **meta** - A Meta object the includes URIs for the next and previous  pages of data as well as the total number of contacts matching the request.\nContacts are returned as paged data. The number of contacts returned per  page can be requested with the **pageSize** parameter, but the actual number of contacts returned per page may be different. The response  contains an URI to the next page of data in the property **meta.next**.\n# Scope\nBy default, only public contacts are returned. This can be changed using the **scope** parameter. Retrieving internal and secret contacts requires  special access rights.\n# Filtering\nThe contacts to retrieve can be filtered either with tags, organization data or both. **Filtering contacts using tags should be preferred.**\n## Tags\nContacts with a given tag or tags can be retrieved by specifying the tags as a comma-separated list for the **tags** parameter. Contacts  having any one of the specified tags will be included in the results.\n\n``` /contacts?tags=VisiPori,VisitYyteri ```\n\nAvailable tags can be retrieved using the `GET /tags` operation.\n\n\n## Organization data\nContacts can also be filtered by their organizational data using the parameters **company**, **division**, **department** and **office**.  The specified values must match the respective contact property **exactly**.\n\n\n```\n/contacts?division=Sivistystoimiala\n/contacts?department=Varhaiskasvatus\n/contacts?division=Sivistystoimiala&department=Varhaiskasvatus\n```\n\n# Full-text search\nContacts that have a given text included in the contact's information can be retrieved using the **search** parameter. \n\n``` /contacts?search=koulu ```\n\nWildcards etc. are currently not supported. The search text should be URL encoded.\n\nWhen searching for matching contacts, values for the *id*, *tags*, and  *scope* properties are ignored. \n\nFull-text search can (and should) be combined with filtering.\n",
+        "tags" : [ "Basic" ],
+        "parameters" : [ {
+          "name" : "search",
+          "description" : "Search contacts using a full-text search. Values of all properties  except **id**, **scope** and **tags** are included in the search.\n",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "company",
+          "description" : "Limit search to contacts for which the property **organization.company** matches the specified value. \n",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "division",
+          "description" : "Limit search to contacts for which the property **organization.division** matches the specified value.\n",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "department",
+          "description" : "Limit search to contacts for which the property **organization.department** matches the specified value.\n",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "office",
+          "description" : "Limit search to contacts for which the property **organization.office** matches the specified value.\n",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "tags",
+          "description" : "Limit search to contacts with any of the specified tags. Multiple tags can be specified as a comma-separated list.\n",
+          "in" : "query",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }, {
+          "name" : "scope",
+          "description" : "Which types of contacts to include in the results. Default is **public**.  Authorization is required when **internal** or **secret** is specified.\n\nContacts marked '**public**' are also returned when '**internal**' is specified. Similarily, both '**public**' and '**internal**' contacts are returned when '**secret**' is specified.\n",
+          "in" : "query",
+          "schema" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/Scope"
+            }, {
+              "default" : "public"
+            } ]
+          }
+        }, {
+          "name" : "pageSize",
+          "description" : "Number of contacts the clients wishes to be returned per request or '**all**'  to request all contacts as one data set. Defaults to 10. Number of contacts returned can be less than the specified `pageSize`.\n\nRetrieving contacts with a page size of '**all**' requires special access rights.\n",
+          "in" : "query",
+          "schema" : {
+            "oneOf" : [ {
+              "type" : "number"
+            }, {
+              "type" : "string",
+              "enum" : [ "all" ]
+            } ],
+            "default" : 10
+          }
+        }, {
+          "name" : "page",
+          "description" : "Which page of the paginated results to return. \n\n**Should not be used directly.** Instead, retrieve the paged data using  the URIs specified in the `meta.next` and `meta.previous` properties  of previous responses.\n",
+          "in" : "query",
+          "schema" : {
+            "type" : "number",
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of contacts",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "meta" : {
+                      "$ref" : "#/components/schemas/Meta"
+                    },
+                    "contacts" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/Contact"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request. Invalid parameter values provided.\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden. Unauthorized access. Possibly due to requesting contacts with a scope other that **public**.\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create a new contact",
+        "description" : "Creates a new contact with specified data.  On success return the created contact object with its id.\n",
+        "tags" : [ "Restricted" ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Contact"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "A new contact was succesfully created.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Contact"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request. Request data is malformed or  the data contains an id is specified for the contact.\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "summary" : "Update multiple existing contacts / Create (import) multiple new contacts",
+        "description" : "Update existing contacts and/or create new contacts.  To create new contacts, specify a value of '**create**' or '**update,create**'  for `operation`. Only existing contacts should have an id. \n\nIf any unknown ids are encountered, an error response is sent,  no updates are made and no new contacts are created.\n",
+        "tags" : [ "Restricted" ],
+        "parameters" : [ {
+          "name" : "operation",
+          "description" : "Specify whether to update existing contacts, create new contacts or both. Defaults to **update**.\n",
+          "in" : "query",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "update", "create" ]
+            },
+            "default" : "update"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "An array of contacts to update and/or create. Only existing contacts should have an id. If any unknown ids are encountered, an error response is sent, no updates are made and no new contacts are created.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/Contact"
+                  }, {
+                    "allOf" : [ {
+                      "$ref" : "#/components/schemas/Contact"
+                    }, {
+                      "type" : "object",
+                      "properties" : {
+                        "id" : {
+                          "type" : "string",
+                          "readOnly" : false
+                        }
+                      }
+                    } ]
+                  } ]
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Event or events were updated / created succesfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Contact"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Request data was malformed or contained contacts with an unknown id.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contacts/{id}" : {
+      "parameters" : [ {
+        "name" : "id",
+        "description" : "The contact id.",
+        "required" : true,
+        "in" : "path",
+        "schema" : {
+          "type" : "string",
+          "example" : "013b6a3c-eda0-45d1-9bd1-87514a4d0a33"
+        }
+      } ],
+      "get" : {
+        "summary" : "Retrieve an existing contact with the specified id",
+        "description" : "Retrieves a single contact by id.",
+        "tags" : [ "Restricted" ],
+        "responses" : {
+          "200" : {
+            "description" : "Contact object.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Contact"
+                }
+              }
+            }
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update an existing contact with the specified id",
+        "tags" : [ "Restricted" ],
+        "requestBody" : {
+          "description" : "The new data for the contact. Should contain all intended values, not just updated ones. Missing properties will be interpreted as empty.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Contact"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Delete a contact with the specified id",
+        "tags" : [ "Restricted" ],
+        "responses" : {
+          "200" : {
+            "description" : "The specified contact was deleted."
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/tags" : {
+      "get" : {
+        "summary" : "Retrieve a list of contact tags",
+        "description" : "Retrieve a list contact tags used. The returned tags are aggregated from the values specified in the **tags** property of individual contacts and are not separately modifiable.\n\nBy default, only tags with at least one contact marked '**public**' are returned.  Other tags can be retrieved by specifying a value for the parameter `scope`.\n\nTo retrieve a list contacts with a given tag, use `GET /contacts` and specify the name of the tag as a value for the **tags** parameter.\n",
+        "tags" : [ "Basic" ],
+        "parameters" : [ {
+          "name" : "scope",
+          "description" : "Limit the returned list of groups by the type of contacts which belong to a specific group. Any group, which has no contacts with the specified scope are omitted from the results.  For example, a group that only has contacts marked '**internal**', is omitted from results  when a scope of '**public**' is specified. \n\nDefault is **public** meaning only groups with at least one **public** contact is returned.  Authorization is required when **internal** or **secret** is specified.\n",
+          "in" : "query",
+          "schema" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/Scope"
+            }, {
+              "default" : "public"
+            } ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "A list of tags.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "responses" : {
+      "NotFound" : {
+        "description" : "The requested contact was not found. For security reasons also returned when attempting to access a contact with a scope other than '**public**' without proper authorization.\n",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas" : {
+      "Contact" : {
+        "description" : "An object representing a single contact.\n",
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "description" : "Internal ID of the contact.",
+            "type" : "string",
+            "readOnly" : true
+          },
+          "displayName" : {
+            "description" : "A text to use as the name of the contact  when *givenName* and  *lastName* are not applicable (i.e. the contact does not represent  a person). If both *displayName* and *givenName/lastName* is present, *displayName* should be used.\n",
+            "type" : "string"
+          },
+          "givenName" : {
+            "description" : "Given name of the contact person.",
+            "type" : "string"
+          },
+          "lastName" : {
+            "description" : "Last name of the contact person.",
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "organization" : {
+            "$ref" : "#/components/schemas/Organization"
+          },
+          "emailAddresses" : {
+            "description" : "Email addresses associated with the contact.",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/EmailAddress"
+            }
+          },
+          "phoneNumbers" : {
+            "description" : "Phone numbers associated with the contact.",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PhoneNumber"
+            }
+          },
+          "addresses" : {
+            "description" : "Physical addresses associated with the contact",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Address"
+            }
+          },
+          "scope" : {
+            "$ref" : "#/components/schemas/Scope"
+          },
+          "tags" : {
+            "description" : "Tags associated with this contact. Can be used to categorize  contacts in addition to the organizational data.",
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "externalId" : {
+            "description" : "External id associated with the contact. (TODO: Better description)",
+            "type" : "string"
+          }
+        }
+      },
+      "Organization" : {
+        "description" : "Organizational information for the contact.\n",
+        "type" : "object",
+        "properties" : {
+          "company" : {
+            "type" : "string"
+          },
+          "division" : {
+            "type" : "string"
+          },
+          "department" : {
+            "type" : "string"
+          },
+          "office" : {
+            "type" : "string"
+          }
+        }
+      },
+      "EmailAddress" : {
+        "type" : "object",
+        "properties" : {
+          "emailAddress" : {
+            "type" : "string",
+            "format" : "email"
+          },
+          "detail" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PhoneNumber" : {
+        "type" : "object",
+        "properties" : {
+          "phoneNumber" : {
+            "type" : "string",
+            "format" : "phone number",
+            "pattern" : "\\+\\d+",
+            "example" : "+358447010000"
+          },
+          "detail" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Address" : {
+        "description" : "Physical address associated with the contact.\n",
+        "type" : "object",
+        "properties" : {
+          "street" : {
+            "type" : "string"
+          },
+          "postalCode" : {
+            "type" : "string"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "country" : {
+            "type" : "string"
+          },
+          "detail" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Scope" : {
+        "description" : "The scope of a contact. Can be either *'public'*, *'internal'* or *'secret'*. By default the API returns only *public* contacts when getting multiple contacts.\n\nAccess to contacts marked '*internal*' or '*secret*' requires special access rights.\n",
+        "type" : "string",
+        "enum" : [ "public", "internal", "secret" ]
+      },
+      "Meta" : {
+        "description" : "Object describing metadata for a response containing multiple contacts.  Mainly provides information about pagination of the results.\n",
+        "type" : "object",
+        "properties" : {
+          "count" : {
+            "description" : "Total number of contacts found for the provided values of filter and search.",
+            "type" : "integer"
+          },
+          "next" : {
+            "description" : "URI of the next page of data. Null for the last page.",
+            "type" : "string",
+            "format" : "URI",
+            "nullable" : true
+          },
+          "previous" : {
+            "description" : "URI of the previous page of data. Null for the first page.",
+            "type" : "string",
+            "format" : "URI",
+            "nullable" : true
+          }
+        }
+      },
+      "Error" : {
+        "description" : "Object returned as a response for invalid requests.\n",
+        "type" : "object",
+        "properties" : {
+          "meta" : {
+            "type" : "object",
+            "properties" : {
+              "error" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "ApiKey" : {
+        "type" : "apiKey",
+        "in" : "header",
+        "name" : "X-API-KEY"
+      }
+    }
+  }
+}
